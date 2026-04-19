@@ -40,8 +40,8 @@
         </div>
       </div>
 
-      <div class="card">
-        <h2>Run Log</h2>
+      <div class="card" id="run-card">
+        <h2>Run Log <span class="card-check-icon" id="run-check-icon"></span></h2>
         <div class="run-form">
           <label>Distance (km)
             <input type="number" id="run-distance" step="0.01" min="0" placeholder="0.00">
@@ -60,8 +60,8 @@
         <div id="run-pace"></div>
       </div>
 
-      <div class="card">
-        <h2>Weight Log</h2>
+      <div class="card" id="weight-card">
+        <h2>Weight Log <span class="card-check-icon" id="weight-check-icon"></span></h2>
         <div class="weight-form">
           <label>Weight (kg)
             <input type="number" id="weight-value" step="0.1" min="0" placeholder="0.0">
@@ -77,6 +77,7 @@
         <h2>Pain Check</h2>
         <p class="caption">0 = no pain, 10 = worst imaginable</p>
         <ul id="pain-check-list"></ul>
+        <button id="pain-update" style="display:none; margin-top:12px;">Update</button>
       </div>
     </section>
 
@@ -116,6 +117,8 @@
     </section>
 
   </main>
+
+  <footer class="app-footer">Version 4</footer>
 
   <script src="app.js"></script>
 </body>

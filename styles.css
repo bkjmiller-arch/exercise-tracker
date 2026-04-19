@@ -262,6 +262,38 @@ button:active { opacity: 0.85; }
   padding: 6px;
 }
 
+.pain-check-icon {
+  width: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #16a34a;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.pain-item.logged {
+  background: rgba(22, 163, 74, 0.06);
+  border-radius: 8px;
+  padding-left: 8px;
+  padding-right: 8px;
+  margin: 0 -8px;
+}
+
+.pain-item.logged .pain-name {
+  color: var(--text);
+}
+
+.pain-item.logged .pain-score {
+  border-color: #16a34a;
+  font-weight: 700;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pain-item.logged {
+    background: rgba(22, 163, 74, 0.1);
+  }
+}
+
 /* ====== SCHEDULE TAB ====== */
 .day-card .pills {
   display: flex;
@@ -348,6 +380,43 @@ button:active { opacity: 0.85; }
   color: var(--text-muted);
   font-size: 14px;
   padding: 6px 0;
+}
+
+/* ====== LOGGED STATE (run / weight cards) ====== */
+.card-check-icon {
+  font-size: 15px;
+  font-weight: 700;
+  color: #16a34a;
+  margin-left: 4px;
+}
+
+.card.card-logged {
+  border-color: #16a34a;
+}
+
+.card.card-logged h2 {
+  color: #16a34a;
+}
+
+@media (prefers-color-scheme: dark) {
+  .card.card-logged {
+    border-color: #4ade80;
+  }
+  .card.card-logged h2 {
+    color: #4ade80;
+  }
+  .card-check-icon {
+    color: #4ade80;
+  }
+}
+
+/* ====== FOOTER ====== */
+.app-footer {
+  text-align: center;
+  padding: 24px 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0.5;
 }
 
 /* ====== DESKTOP ====== */

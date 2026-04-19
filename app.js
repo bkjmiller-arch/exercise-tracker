@@ -17,20 +17,23 @@ function loadData(key) {
 // SEED DATA — loaded once on first visit
 // ============================================================
 const SEED_LIBRARY = [
-  { id: 'ex1', name: 'Hamstring stretch', type: 'Stretch' },
-  { id: 'ex2', name: 'Hip flexor stretch', type: 'Stretch' },
-  { id: 'ex3', name: 'Calf raises', type: 'Exercise' },
-  { id: 'ex4', name: 'Plank 60s', type: 'Exercise' },
+  { id: 'ex1', name: 'Glute bridges 10 x 3', type: 'Exercise' },
+  { id: 'ex2', name: 'Piriformis sitting hip stretch', type: 'Stretch' },
+  { id: 'ex3', name: 'Hip hinge side bridge 8 x 5sec x 2', type: 'Exercise' },
+  { id: 'ex4', name: 'Hip flexor stretch', type: 'Stretch' },
+  { id: 'ex5', name: 'Clamshell 8 x 5sec x 2', type: 'Exercise' },
+  { id: 'ex6', name: 'Hip over bottle 8 x 2', type: 'Exercise' },
+  { id: 'ex7', name: 'Swings', type: 'Exercise' },
 ];
 
 const SEED_SCHEDULE = {
-  Monday:    ['ex1', 'ex2', 'ex3', 'ex4'],
-  Tuesday:   ['ex1', 'ex2'],
-  Wednesday: ['ex1', 'ex2', 'ex3', 'ex4'],
-  Thursday:  ['ex1', 'ex2'],
-  Friday:    ['ex1', 'ex2', 'ex3', 'ex4'],
-  Saturday:  ['ex1', 'ex2'],
-  Sunday:    ['ex1', 'ex2'],
+  Monday:    [],
+  Tuesday:   [],
+  Wednesday: [],
+  Thursday:  [],
+  Friday:    [],
+  Saturday:  [],
+  Sunday:    [],
 };
 
 const SEED_PAINS = [
@@ -40,9 +43,12 @@ const SEED_PAINS = [
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 function initSeedData() {
-  if (!loadData('library'))  saveData('library', SEED_LIBRARY);
-  if (!loadData('schedule')) saveData('schedule', SEED_SCHEDULE);
-  if (!loadData('pains'))    saveData('pains', SEED_PAINS);
+  if ((loadData('dataVersion') || 0) < 4) {
+    saveData('library', SEED_LIBRARY);
+    saveData('schedule', SEED_SCHEDULE);
+    saveData('dataVersion', 4);
+  }
+  if (!loadData('pains')) saveData('pains', SEED_PAINS);
 }
 // ============================================================
 
@@ -185,13 +191,16 @@ function addAdhoc() {
 // Run log
 function renderRunLog(today) {
   const run = loadData(`run-${today}`);
-  if (run && run.logged) {
-    document.getElementById('run-distance').value = run.distance;
-    document.getElementById('run-time').value     = run.time;
-    document.getElementById('run-feeling').value  = run.feeling;
+  const logged = run && run.logged;
+  document.getElementById('run-card').classList.toggle('card-logged', logged);
+  document.getElementById('run-check-icon').textContent = logged ? '✓' : '';
+  if (logged) {
+    document.getElementById('run-distance').value = run.distance || '';
+    document.getElementById('run-time').value     = run.time || '';
+    document.getElementById('run-feeling').value  = run.feeling || '';
     document.getElementById('run-notes').value    = run.notes || '';
     document.getElementById('run-save').textContent = 'Update run';
-    document.getElementById('run-pace').textContent = `Pace: ${formatPace(run.distance, run.time)}`;
+    document.getElementById('run-pace').textContent = run.distance && run.time ? `Pace: ${formatPace(run.distance, run.time)}` : '';
   } else {
     document.getElementById('run-save').textContent = 'Save run';
     document.getElementById('run-pace').textContent = '';
@@ -205,12 +214,17 @@ function initRunLog() {
     const feeling  = parseInt(document.getElementById('run-feeling').value, 10);
     const notes    = document.getElementById('run-notes').value.trim();
 
-    if (!distance || distance <= 0) { alert('Please enter a distance.'); return; }
-    if (!time || time <= 0)         { alert('Please enter a time.'); return; }
-    if (!feeling || feeling < 1 || feeling > 10) { alert('Feeling must be between 1 and 10.'); return; }
+    if (feeling && (feeling < 1 || feeling > 10)) { alert('Feeling must be between 1 and 10.'); return; }
 
     const today = getToday();
-    saveData(`run-${today}`, { distance, time, feeling, notes, logged: true, loggedAt: new Date().toISOString() });
+    saveData(`run-${today}`, {
+      distance: distance || null,
+      time: time || null,
+      feeling: feeling || null,
+      notes,
+      logged: true,
+      loggedAt: new Date().toISOString()
+    });
     renderRunLog(today);
   });
 }
@@ -218,8 +232,11 @@ function initRunLog() {
 // Weight log
 function renderWeightLog(today) {
   const weight = loadData(`weight-${today}`);
-  if (weight && weight.logged) {
-    document.getElementById('weight-value').value = weight.value;
+  const logged = weight && weight.logged;
+  document.getElementById('weight-card').classList.toggle('card-logged', logged);
+  document.getElementById('weight-check-icon').textContent = logged ? '✓' : '';
+  if (logged) {
+    document.getElementById('weight-value').value = weight.value || '';
     document.getElementById('weight-notes').value = weight.notes || '';
     document.getElementById('weight-save').textContent = 'Update weight';
   } else {
@@ -231,9 +248,8 @@ function initWeightLog() {
   document.getElementById('weight-save').addEventListener('click', () => {
     const value = parseFloat(document.getElementById('weight-value').value);
     const notes = document.getElementById('weight-notes').value.trim();
-    if (!value || value <= 0) { alert('Please enter a weight.'); return; }
     const today = getToday();
-    saveData(`weight-${today}`, { value, notes, logged: true, loggedAt: new Date().toISOString() });
+    saveData(`weight-${today}`, { value: value || null, notes, logged: true, loggedAt: new Date().toISOString() });
     document.getElementById('weight-save').textContent = 'Update weight';
   });
 }
@@ -252,21 +268,39 @@ function renderPainCheck(today) {
 
   pains.forEach(pain => {
     const li = document.createElement('li');
-    li.className = 'pain-item';
-    const currentVal = painLog[pain.id] !== undefined ? painLog[pain.id] : '';
+    const isLogged = painLog[pain.id] !== undefined;
+    li.className = 'pain-item' + (isLogged ? ' logged' : '');
+    const currentVal = isLogged ? painLog[pain.id] : '';
     li.innerHTML = `
+      <span class="pain-check-icon">${isLogged ? '✓' : ''}</span>
       <span class="pain-name">${escHtml(pain.name)}</span>
       <input type="number" class="pain-score" min="0" max="10"
              value="${currentVal}" placeholder="0–10" data-id="${pain.id}">`;
-    li.querySelector('input').addEventListener('change', e => {
-      const score = parseInt(e.target.value, 10);
-      if (isNaN(score) || score < 0 || score > 10) { e.target.value = ''; return; }
-      const pl = loadData(`painlog-${today}`) || {};
-      pl[pain.id] = score;
-      saveData(`painlog-${today}`, pl);
-    });
     list.appendChild(li);
   });
+
+  const updateBtn = document.getElementById('pain-update');
+  updateBtn.style.display = 'inline-block';
+  updateBtn.onclick = () => {
+    const inputs = list.querySelectorAll('.pain-score');
+    const pl = loadData(`painlog-${today}`) || {};
+    let anyFilled = false;
+    inputs.forEach(input => {
+      const score = parseInt(input.value, 10);
+      if (!isNaN(score) && score >= 0 && score <= 10) {
+        pl[input.dataset.id] = score;
+        anyFilled = true;
+        const li = input.closest('.pain-item');
+        li.classList.add('logged');
+        li.querySelector('.pain-check-icon').textContent = '✓';
+      }
+    });
+    if (anyFilled) {
+      saveData(`painlog-${today}`, pl);
+      updateBtn.textContent = 'Updated ✓';
+      setTimeout(() => { updateBtn.textContent = 'Update'; }, 1500);
+    }
+  };
 }
 // ============================================================
 
