@@ -103,6 +103,7 @@ function initTabs() {
       if (tab === 'schedule')  renderSchedule();
       if (tab === 'exercises') renderExercises();
       if (tab === 'pains')     renderPains();
+      if (tab === 'history')   renderHistory();
     });
   });
 }
@@ -115,7 +116,8 @@ function renderToday() {
   const today = getToday();
   document.getElementById('today-heading').textContent = formatHeading();
 
-  const todayData  = loadData(`today-${today}`) || { checks: {}, adhoc: [] };
+  const todayData  = loadData(`today-${today}`) || { checks: {}, difficulty: {}, adhoc: [] };
+  if (!todayData.difficulty) todayData.difficulty = {};
   const schedule   = loadData('schedule') || {};
   const library    = loadData('library') || [];
   const dayName    = getDayName();
@@ -131,12 +133,13 @@ function renderToday() {
   scheduledIds.forEach(id => {
     const ex = library.find(e => e.id === id);
     if (!ex) return;
-    list.appendChild(makeCheckItem(id, ex.name, ex.type, !!todayData.checks[id]));
+    list.appendChild(makeCheckItem(id, ex.name, ex.type, !!todayData.checks[id], todayData.difficulty[id]));
   });
 
   todayData.adhoc.forEach((item, idx) => {
-    const id = `adhoc-${idx}`;
-    list.appendChild(makeCheckItem(id, item.name, item.type, !!todayData.checks[id]));
+    const libMatch = library.find(ex => ex.name.toLowerCase() === item.name.toLowerCase());
+    const id = libMatch ? libMatch.id : `adhoc-${idx}`;
+    list.appendChild(makeCheckItem(id, item.name, item.type, !!todayData.checks[id], todayData.difficulty[id]));
   });
 
   renderRunLog(today);
@@ -144,18 +147,29 @@ function renderToday() {
   renderPainCheck(today);
 }
 
-function makeCheckItem(id, name, type, checked) {
+function makeCheckItem(id, name, type, checked, difficulty) {
   const li = document.createElement('li');
   li.className = 'check-item' + (checked ? ' checked' : '');
   li.innerHTML = `
-    <label>
+    <label class="check-label">
       <input type="checkbox" data-id="${id}" ${checked ? 'checked' : ''}>
       <span class="item-name">${escHtml(name)}</span>
       <span class="type-tag type-${type.toLowerCase()}">${escHtml(type)}</span>
-    </label>`;
-  li.querySelector('input').addEventListener('change', e => {
+    </label>
+    <input type="number" class="difficulty-input" min="1" max="10"
+           value="${difficulty || ''}" placeholder="diff" data-id="${id}" title="Difficulty 1–10">`;
+  li.querySelector('input[type="checkbox"]').addEventListener('change', e => {
     toggleCheck(id, e.target.checked);
     li.classList.toggle('checked', e.target.checked);
+  });
+  li.querySelector('.difficulty-input').addEventListener('change', e => {
+    const score = parseInt(e.target.value, 10);
+    if (isNaN(score) || score < 1 || score > 10) { e.target.value = ''; return; }
+    const today = getToday();
+    const data = loadData(`today-${today}`) || { checks: {}, difficulty: {}, adhoc: [] };
+    if (!data.difficulty) data.difficulty = {};
+    data.difficulty[id] = score;
+    saveData(`today-${today}`, data);
   });
   return li;
 }
@@ -172,6 +186,18 @@ function initAdhoc() {
   document.getElementById('adhoc-name').addEventListener('keydown', e => {
     if (e.key === 'Enter') addAdhoc();
   });
+  document.getElementById('adhoc-name').addEventListener('input', e => {
+    const library = loadData('library') || [];
+    const match = library.find(ex => ex.name.toLowerCase() === e.target.value.toLowerCase());
+    if (match) document.getElementById('adhoc-type').value = match.type;
+  });
+  populateAdhocSuggestions();
+}
+
+function populateAdhocSuggestions() {
+  const library = loadData('library') || [];
+  const dl = document.getElementById('exercise-suggestions');
+  if (dl) dl.innerHTML = library.map(ex => `<option value="${escHtml(ex.name)}">`).join('');
 }
 
 function addAdhoc() {
@@ -180,8 +206,17 @@ function addAdhoc() {
   const name = nameEl.value.trim();
   if (!name) { nameEl.focus(); return; }
 
+  // If it's not already in the library, add it
+  const library = loadData('library') || [];
+  const exists = library.some(ex => ex.name.toLowerCase() === name.toLowerCase());
+  if (!exists) {
+    library.push({ id: generateId(), name, type: typeEl.value });
+    saveData('library', library);
+    populateAdhocSuggestions();
+  }
+
   const today = getToday();
-  const data = loadData(`today-${today}`) || { checks: {}, adhoc: [] };
+  const data = loadData(`today-${today}`) || { checks: {}, difficulty: {}, adhoc: [] };
   data.adhoc.push({ name, type: typeEl.value });
   saveData(`today-${today}`, data);
   nameEl.value = '';
@@ -493,6 +528,312 @@ function removePain(id) {
 // ============================================================
 
 // ============================================================
+// HISTORY TAB
+// ============================================================
+function renderHistory() {
+  const library = loadData('library') || [];
+  const pains   = loadData('pains') || [];
+  const runs = [], weights = [], todayByDate = {}, painByDate = {};
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+    if (key.startsWith('run-')) {
+      const r = loadData(key);
+      if (r && r.logged) runs.push({ date: key.slice(4), ...r });
+    }
+    if (key.startsWith('weight-')) {
+      const w = loadData(key);
+      if (w && w.logged) weights.push({ date: key.slice(7), ...w });
+    }
+    if (key.startsWith('today-')) {
+      const d = loadData(key);
+      if (d) todayByDate[key.slice(6)] = d;
+    }
+    if (key.startsWith('painlog-')) {
+      const pl = loadData(key);
+      if (pl && Object.keys(pl).length > 0) painByDate[key.slice(8)] = pl;
+    }
+  }
+
+  runs.sort((a, b) => b.date.localeCompare(a.date));
+  weights.sort((a, b) => b.date.localeCompare(a.date));
+
+  const recentRuns    = runs.slice(0, 7);
+  const recentWeights = weights.slice(0, 7);
+
+  // Dates that have any exercise activity (checks or difficulty)
+  const exDates = Object.keys(todayByDate)
+    .filter(d => {
+      const t = todayByDate[d];
+      const hasChecks = t.checks && Object.values(t.checks).some(v => v);
+      const hasDiff   = t.difficulty && Object.keys(t.difficulty).length > 0;
+      return hasChecks || hasDiff;
+    })
+    .sort((a, b) => b.localeCompare(a)).slice(0, 7).reverse();
+
+  const painDates = Object.keys(painByDate)
+    .sort((a, b) => b.localeCompare(a)).slice(0, 7).reverse();
+
+  // ---- Runs ----
+  const runsEl = document.getElementById('history-runs');
+  if (recentRuns.length === 0) {
+    runsEl.innerHTML = '<div class="card"><h2>Runs</h2><p class="empty">No runs logged yet.</p></div>';
+  } else {
+    runsEl.innerHTML = `
+      <div class="card">
+        <h2>Runs <span class="history-count">(last ${recentRuns.length})</span></h2>
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead><tr><th>Date</th><th>Dist</th><th>Time</th><th>Pace</th><th>Feel</th></tr></thead>
+            <tbody>${recentRuns.map(r => `
+              <tr>
+                <td>${formatDate(r.date)}</td>
+                <td>${r.distance ? r.distance + ' km' : '—'}</td>
+                <td>${r.time ? r.time + ' min' : '—'}</td>
+                <td>${r.distance && r.time ? formatPace(r.distance, r.time) : '—'}</td>
+                <td>${r.feeling || '—'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  // ---- Weight ----
+  const weightEl = document.getElementById('history-weight');
+  if (recentWeights.length === 0) {
+    weightEl.innerHTML = '<div class="card"><h2>Weight</h2><p class="empty">No weight logged yet.</p></div>';
+  } else {
+    weightEl.innerHTML = `
+      <div class="card">
+        <h2>Weight <span class="history-count">(last ${recentWeights.length})</span></h2>
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead><tr><th>Date</th><th>Weight</th><th>Notes</th></tr></thead>
+            <tbody>${recentWeights.map(w => `
+              <tr>
+                <td>${formatDate(w.date)}</td>
+                <td>${w.value ? w.value + ' kg' : '—'}</td>
+                <td class="notes-cell">${escHtml(w.notes || '')}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  // ---- Exercises (ticks + difficulty) ----
+  const diffEl = document.getElementById('history-difficulty');
+  if (exDates.length === 0) {
+    diffEl.innerHTML = '<div class="card"><h2>Exercises</h2><p class="empty">Tick exercises or add difficulty scores in Today\'s Plan to see history here.</p></div>';
+  } else {
+    const allExIds = new Set();
+    exDates.forEach(date => {
+      const t = todayByDate[date];
+      if (t.checks) Object.keys(t.checks).forEach(id => { if (t.checks[id]) allExIds.add(id); });
+      if (t.difficulty) Object.keys(t.difficulty).forEach(id => allExIds.add(id));
+    });
+
+    // Build a lookup for any adhoc IDs that weren't resolved to library IDs
+    const adhocNameById = {};
+    exDates.forEach(date => {
+      const t = todayByDate[date];
+      if (!t.adhoc) return;
+      t.adhoc.forEach((item, idx) => {
+        const adhocId = `adhoc-${idx}`;
+        if (allExIds.has(adhocId)) adhocNameById[adhocId] = item.name;
+      });
+    });
+
+    const relevantEx = [
+      ...library.filter(ex => allExIds.has(ex.id)),
+      ...Object.entries(adhocNameById).map(([id, name]) => ({ id, name, type: 'Other' }))
+    ];
+
+    const rows = relevantEx.map(ex => {
+      const cells = exDates.map(date => {
+        const t = todayByDate[date] || {};
+        const done  = t.checks && t.checks[ex.id];
+        const score = t.difficulty && t.difficulty[ex.id];
+        if (done && score) return `<td><span class="diff-badge diff-${diffBand(score)}">${score}</span></td>`;
+        if (done)          return `<td><span class="done-tick">✓</span></td>`;
+        if (score)         return `<td><span class="diff-badge diff-${diffBand(score)}">${score}</span></td>`;
+        return `<td><span class="diff-empty">—</span></td>`;
+      });
+      return `<tr><td class="ex-name-cell">${escHtml(ex.name)}</td>${cells.join('')}</tr>`;
+    });
+
+    const dateHeaders = exDates.map(d => `<th>${formatDate(d)}</th>`).join('');
+    diffEl.innerHTML = `
+      <div class="card">
+        <h2>Exercises <span class="history-count">(last ${exDates.length} sessions)</span></h2>
+        <p class="caption">✓ = completed &nbsp;·&nbsp; number = difficulty score</p>
+        <div class="history-table-wrap">
+          <table class="history-table diff-table">
+            <thead><tr><th>Exercise</th>${dateHeaders}</tr></thead>
+            <tbody>${rows.join('')}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  // ---- Pain history ----
+  const painHistEl = document.getElementById('history-pains');
+  if (painDates.length === 0 || pains.length === 0) {
+    painHistEl.innerHTML = '<div class="card"><h2>Pain History</h2><p class="empty">No pain scores logged yet.</p></div>';
+  } else {
+    const rows = pains.map(pain => {
+      const cells = painDates.map(date => {
+        const score = painByDate[date] && painByDate[date][pain.id];
+        if (score === undefined) return `<td><span class="diff-empty">—</span></td>`;
+        return `<td><span class="diff-badge diff-${painBand(score)}">${score}</span></td>`;
+      });
+      return `<tr><td class="ex-name-cell">${escHtml(pain.name)}</td>${cells.join('')}</tr>`;
+    }).filter((_, i) => painDates.some(date => painByDate[date] && painByDate[date][pains[i].id] !== undefined));
+
+    if (rows.length === 0) {
+      painHistEl.innerHTML = '<div class="card"><h2>Pain History</h2><p class="empty">No pain scores logged yet.</p></div>';
+    } else {
+      const dateHeaders = painDates.map(d => `<th>${formatDate(d)}</th>`).join('');
+      painHistEl.innerHTML = `
+        <div class="card">
+          <h2>Pain History <span class="history-count">(last ${painDates.length} days)</span></h2>
+          <p class="caption">0 = no pain &nbsp;·&nbsp; 10 = worst imaginable</p>
+          <div class="history-table-wrap">
+            <table class="history-table diff-table">
+              <thead><tr><th>Pain</th>${dateHeaders}</tr></thead>
+              <tbody>${rows.join('')}</tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+  }
+
+  document.getElementById('download-btn').onclick = downloadAllData;
+}
+
+function formatDate(dateStr) {
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}`;
+}
+
+function diffBand(score) {
+  if (score <= 3) return 'low';
+  if (score <= 6) return 'mid';
+  return 'high';
+}
+
+function painBand(score) {
+  if (score <= 2) return 'low';
+  if (score <= 5) return 'mid';
+  return 'high';
+}
+// ============================================================
+
+// ============================================================
+// DATA EXPORT
+// ============================================================
+function renderSyncArea() {
+  // Download button now lives in the History tab
+}
+
+function collectData() {
+  const painNames = {};
+  (loadData('pains') || []).forEach(p => { painNames[p.id] = p.name; });
+
+  const runs = [], weight = [], pains = [];
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+
+    if (key.startsWith('run-')) {
+      const r = loadData(key);
+      if (r && r.logged) {
+        const date = key.slice(4);
+        runs.push([date, r.distance || '', r.time || '',
+          r.distance && r.time ? formatPace(r.distance, r.time) : '',
+          r.feeling || '', r.notes || '']);
+      }
+    }
+    if (key.startsWith('weight-')) {
+      const w = loadData(key);
+      if (w && w.logged) {
+        const date = key.slice(7);
+        weight.push([date, w.value || '', w.notes || '']);
+      }
+    }
+    if (key.startsWith('painlog-')) {
+      const pl = loadData(key);
+      if (pl) {
+        const date = key.slice(8);
+        Object.entries(pl).forEach(([id, score]) => {
+          pains.push([date, painNames[id] || id, score]);
+        });
+      }
+    }
+  }
+
+  runs.sort((a, b) => a[0].localeCompare(b[0]));
+  weight.sort((a, b) => a[0].localeCompare(b[0]));
+  pains.sort((a, b) => a[0].localeCompare(b[0]));
+
+  return { runs, weight, pains };
+}
+
+function toCSV(headers, rows) {
+  const escape = val => `"${String(val).replace(/"/g, '""')}"`;
+  return [headers, ...rows].map(row => row.map(escape).join(',')).join('\n');
+}
+
+function triggerDownload(filename, csvContent) {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadAllData() {
+  const { runs, weight, pains } = collectData();
+  const today = getToday();
+
+  if (!runs.length && !weight.length && !pains.length) {
+    alert('No data logged yet to download.');
+    return;
+  }
+
+  const btn = document.getElementById('download-btn');
+  btn.textContent = 'Downloading…';
+  btn.disabled = true;
+
+  if (runs.length) {
+    triggerDownload(`runs-${today}.csv`,
+      toCSV(['Date','Distance (km)','Time (min)','Pace','Feeling (1-10)','Notes'], runs));
+  }
+  setTimeout(() => {
+    if (weight.length) {
+      triggerDownload(`weight-${today}.csv`,
+        toCSV(['Date','Weight (kg)','Notes'], weight));
+    }
+  }, 400);
+  setTimeout(() => {
+    if (pains.length) {
+      triggerDownload(`pains-${today}.csv`,
+        toCSV(['Date','Pain','Score (0-10)'], pains));
+    }
+    btn.textContent = 'Download data as CSV';
+    btn.disabled = false;
+  }, 800);
+}
+// ============================================================
+
+// ============================================================
 // UTILITY
 // ============================================================
 function escHtml(str) {
@@ -517,6 +858,7 @@ function init() {
   initExercises();
   initSchedule();
   renderToday();
+  renderSyncArea();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});

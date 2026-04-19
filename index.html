@@ -18,6 +18,7 @@
     <button class="tab-btn" data-tab="schedule">Schedule</button>
     <button class="tab-btn" data-tab="exercises">Exercises</button>
     <button class="tab-btn" data-tab="pains">Pains</button>
+    <button class="tab-btn" data-tab="history">History</button>
   </nav>
 
   <main>
@@ -30,7 +31,8 @@
         <h2>Today's Plan</h2>
         <ul id="today-checklist"></ul>
         <div class="add-adhoc">
-          <input type="text" id="adhoc-name" placeholder="Add something for today…">
+          <input type="text" id="adhoc-name" list="exercise-suggestions" placeholder="Pick or type an exercise…" autocomplete="off">
+          <datalist id="exercise-suggestions"></datalist>
           <select id="adhoc-type">
             <option value="Stretch">Stretch</option>
             <option value="Exercise">Exercise</option>
@@ -116,9 +118,23 @@
       <ul id="pain-list"></ul>
     </section>
 
+    <!-- HISTORY TAB -->
+    <section id="tab-history" class="tab-content">
+      <h1>History</h1>
+      <div id="history-runs"></div>
+      <div id="history-weight"></div>
+      <div id="history-difficulty"></div>
+      <div id="history-pains"></div>
+      <div class="history-download">
+        <button id="download-btn">Download data as CSV</button>
+      </div>
+    </section>
+
   </main>
 
-  <footer class="app-footer">Version 4</footer>
+  <footer class="app-footer">
+    <div class="version-text">Version 10</div>
+  </footer>
 
   <script src="app.js"></script>
 </body>
