@@ -1,0 +1,357 @@
+/* ====== CSS VARIABLES: light and dark mode ====== */
+:root {
+  --bg: #f8f9fa;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #1a202c;
+  --text-muted: #718096;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --danger: #ef4444;
+  --checked-text: #a0aec0;
+  --tag-stretch-bg: #d1fae5;
+  --tag-stretch-fg: #065f46;
+  --tag-exercise-bg: #dbeafe;
+  --tag-exercise-fg: #1e40af;
+  --tag-other-bg: #fef3c7;
+  --tag-other-fg: #92400e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111827;
+    --surface: #1f2937;
+    --border: #374151;
+    --text: #f9fafb;
+    --text-muted: #9ca3af;
+    --accent: #3b82f6;
+    --accent-hover: #60a5fa;
+    --checked-text: #6b7280;
+    --tag-stretch-bg: #064e3b;
+    --tag-stretch-fg: #6ee7b7;
+    --tag-exercise-bg: #1e3a5f;
+    --tag-exercise-fg: #93c5fd;
+    --tag-other-bg: #78350f;
+    --tag-other-fg: #fde68a;
+  }
+}
+
+/* ====== RESET ====== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ====== BASE ====== */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* ====== TAB BAR ====== */
+.tab-bar {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px 4px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-btn:hover { color: var(--text); }
+
+/* ====== LAYOUT ====== */
+main {
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
+h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+h3 { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+
+/* ====== CARDS ====== */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+/* ====== INPUTS & BUTTONS ====== */
+input[type="text"],
+input[type="number"],
+select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 15px;
+  color: var(--text);
+  width: 100%;
+  -webkit-appearance: none;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:hover { background: var(--accent-hover); }
+button:active { opacity: 0.85; }
+
+/* ====== TYPE TAGS ====== */
+.type-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.type-stretch  { background: var(--tag-stretch-bg);  color: var(--tag-stretch-fg); }
+.type-exercise { background: var(--tag-exercise-bg); color: var(--tag-exercise-fg); }
+.type-other    { background: var(--tag-other-bg);    color: var(--tag-other-fg); }
+
+/* ====== TODAY: CHECKLIST ====== */
+#today-checklist {
+  list-style: none;
+  margin-bottom: 14px;
+}
+
+.check-item {
+  border-bottom: 1px solid var(--border);
+}
+.check-item:last-child { border-bottom: none; }
+
+.check-item label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  cursor: pointer;
+}
+
+.check-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.check-item .item-name { flex: 1; font-size: 15px; }
+
+.check-item.checked .item-name {
+  text-decoration: line-through;
+  color: var(--checked-text);
+}
+
+/* ====== TODAY: AD-HOC ADD ====== */
+.add-adhoc {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.add-adhoc input { flex: 1; min-width: 130px; }
+.add-adhoc select { width: auto; flex-shrink: 0; }
+
+/* ====== TODAY: RUN LOG ====== */
+.run-form, .weight-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.run-form label, .weight-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.run-form label input, .weight-form label input {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.run-form button, .weight-form button {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.pace-display {
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* ====== TODAY: PAIN CHECK ====== */
+.caption {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+#pain-check-list { list-style: none; }
+
+.pain-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.pain-item:last-child { border-bottom: none; }
+
+.pain-item .pain-name { flex: 1; font-size: 15px; }
+
+.pain-item .pain-score {
+  width: 72px;
+  text-align: center;
+  padding: 6px;
+}
+
+/* ====== SCHEDULE TAB ====== */
+.day-card .pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  min-height: 30px;
+  align-items: flex-start;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--tag-exercise-bg);
+  color: var(--tag-exercise-fg);
+  border-radius: 999px;
+  padding: 4px 4px 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pill-remove {
+  background: none;
+  color: inherit;
+  padding: 0;
+  width: 22px;
+  height: 22px;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.pill-remove:hover { background: rgba(0,0,0,0.12); opacity: 1; }
+
+.empty-pills { font-size: 13px; color: var(--text-muted); }
+
+.schedule-add {
+  display: flex;
+  gap: 8px;
+}
+.schedule-add select { flex: 1; }
+
+/* ====== EXERCISES TAB ====== */
+#exercise-list, #pain-list { list-style: none; }
+
+.exercise-item, .pain-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.exercise-item:last-child, .pain-list-item:last-child { border-bottom: none; }
+
+.exercise-item .item-name,
+.pain-list-item span { flex: 1; font-size: 15px; }
+
+.remove-btn {
+  background: none;
+  color: var(--danger);
+  padding: 2px 6px;
+  font-size: 20px;
+  line-height: 1;
+  border-radius: 6px;
+}
+.remove-btn:hover { background: rgba(239, 68, 68, 0.1); }
+
+/* ====== ADD FORMS (Exercises / Pains tabs) ====== */
+.add-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.add-form input { flex: 1; min-width: 150px; }
+.add-form select { width: auto; }
+
+/* ====== EMPTY STATES ====== */
+.empty {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 6px 0;
+}
+
+/* ====== DESKTOP ====== */
+@media (min-width: 600px) {
+  main { padding: 24px; }
+  .tab-btn { font-size: 15px; padding: 14px 8px; }
+}

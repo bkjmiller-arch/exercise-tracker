@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Exercise Tracker">
+  <title>Exercise Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="today">Today</button>
+    <button class="tab-btn" data-tab="schedule">Schedule</button>
+    <button class="tab-btn" data-tab="exercises">Exercises</button>
+    <button class="tab-btn" data-tab="pains">Pains</button>
+  </nav>
+
+  <main>
+
+    <!-- TODAY TAB -->
+    <section id="tab-today" class="tab-content active">
+      <h1 id="today-heading"></h1>
+
+      <div class="card">
+        <h2>Today's Plan</h2>
+        <ul id="today-checklist"></ul>
+        <div class="add-adhoc">
+          <input type="text" id="adhoc-name" placeholder="Add something for today…">
+          <select id="adhoc-type">
+            <option value="Stretch">Stretch</option>
+            <option value="Exercise">Exercise</option>
+            <option value="Other">Other</option>
+          </select>
+          <button id="adhoc-add">Add</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Run Log</h2>
+        <div class="run-form">
+          <label>Distance (km)
+            <input type="number" id="run-distance" step="0.01" min="0" placeholder="0.00">
+          </label>
+          <label>Time (minutes)
+            <input type="number" id="run-time" step="1" min="0" placeholder="0">
+          </label>
+          <label>Feeling (1–10)
+            <input type="number" id="run-feeling" min="1" max="10" placeholder="1–10">
+          </label>
+          <label>Notes (optional)
+            <input type="text" id="run-notes" placeholder="How did it go?">
+          </label>
+          <button id="run-save">Save run</button>
+        </div>
+        <div id="run-pace"></div>
+      </div>
+
+      <div class="card">
+        <h2>Weight Log</h2>
+        <div class="weight-form">
+          <label>Weight (kg)
+            <input type="number" id="weight-value" step="0.1" min="0" placeholder="0.0">
+          </label>
+          <label>Notes (optional)
+            <input type="text" id="weight-notes" placeholder="Any notes…">
+          </label>
+          <button id="weight-save">Save weight</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Pain Check</h2>
+        <p class="caption">0 = no pain, 10 = worst imaginable</p>
+        <ul id="pain-check-list"></ul>
+      </div>
+    </section>
+
+    <!-- SCHEDULE TAB -->
+    <section id="tab-schedule" class="tab-content">
+      <h1>Schedule</h1>
+      <div id="schedule-days"></div>
+    </section>
+
+    <!-- EXERCISES TAB -->
+    <section id="tab-exercises" class="tab-content">
+      <h1>Exercises</h1>
+      <div class="card">
+        <div class="add-form">
+          <input type="text" id="exercise-name" placeholder="Exercise name">
+          <select id="exercise-type">
+            <option value="Stretch">Stretch</option>
+            <option value="Exercise">Exercise</option>
+            <option value="Other">Other</option>
+          </select>
+          <button id="exercise-add">Add</button>
+        </div>
+      </div>
+      <ul id="exercise-list"></ul>
+    </section>
+
+    <!-- PAINS TAB -->
+    <section id="tab-pains" class="tab-content">
+      <h1>Pains</h1>
+      <div class="card">
+        <div class="add-form">
+          <input type="text" id="pain-name" placeholder="e.g. Left hip flexor">
+          <button id="pain-add">Add</button>
+        </div>
+      </div>
+      <ul id="pain-list"></ul>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
