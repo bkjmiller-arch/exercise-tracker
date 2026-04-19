@@ -521,6 +521,29 @@ button:active { opacity: 0.85; }
   .done-tick { color: #4ade80; }
 }
 
+.hist-del-btn {
+  background: none;
+  color: var(--danger);
+  padding: 0 4px;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 4px;
+  opacity: 0.5;
+}
+.hist-del-btn:hover { background: rgba(239,68,68,0.1); opacity: 1; }
+
+.col-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.col-del {
+  font-size: 13px;
+  padding: 0 3px;
+}
+
 .diff-table th:first-child,
 .diff-table td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
 

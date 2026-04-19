@@ -585,7 +585,7 @@ function renderHistory() {
         <h2>Runs <span class="history-count">(last ${recentRuns.length})</span></h2>
         <div class="history-table-wrap">
           <table class="history-table">
-            <thead><tr><th>Date</th><th>Dist</th><th>Time</th><th>Pace</th><th>Feel</th></tr></thead>
+            <thead><tr><th>Date</th><th>Dist</th><th>Time</th><th>Pace</th><th>Feel</th><th></th></tr></thead>
             <tbody>${recentRuns.map(r => `
               <tr>
                 <td>${formatDate(r.date)}</td>
@@ -593,11 +593,15 @@ function renderHistory() {
                 <td>${r.time ? r.time + ' min' : '—'}</td>
                 <td>${r.distance && r.time ? formatPace(r.distance, r.time) : '—'}</td>
                 <td>${r.feeling || '—'}</td>
+                <td><button class="hist-del-btn" data-type="run" data-date="${r.date}">×</button></td>
               </tr>`).join('')}
             </tbody>
           </table>
         </div>
       </div>`;
+    runsEl.querySelectorAll('.hist-del-btn').forEach(btn => {
+      btn.addEventListener('click', () => deleteHistoryEntry(btn.dataset.type, btn.dataset.date));
+    });
   }
 
   // ---- Weight ----
@@ -610,17 +614,21 @@ function renderHistory() {
         <h2>Weight <span class="history-count">(last ${recentWeights.length})</span></h2>
         <div class="history-table-wrap">
           <table class="history-table">
-            <thead><tr><th>Date</th><th>Weight</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Date</th><th>Weight</th><th>Notes</th><th></th></tr></thead>
             <tbody>${recentWeights.map(w => `
               <tr>
                 <td>${formatDate(w.date)}</td>
                 <td>${w.value ? w.value + ' kg' : '—'}</td>
                 <td class="notes-cell">${escHtml(w.notes || '')}</td>
+                <td><button class="hist-del-btn" data-type="weight" data-date="${w.date}">×</button></td>
               </tr>`).join('')}
             </tbody>
           </table>
         </div>
       </div>`;
+    weightEl.querySelectorAll('.hist-del-btn').forEach(btn => {
+      btn.addEventListener('click', () => deleteHistoryEntry(btn.dataset.type, btn.dataset.date));
+    });
   }
 
   // ---- Exercises (ticks + difficulty) ----
@@ -635,7 +643,6 @@ function renderHistory() {
       if (t.difficulty) Object.keys(t.difficulty).forEach(id => allExIds.add(id));
     });
 
-    // Build a lookup for any adhoc IDs that weren't resolved to library IDs
     const adhocNameById = {};
     exDates.forEach(date => {
       const t = todayByDate[date];
@@ -661,7 +668,11 @@ function renderHistory() {
         if (score)         return `<td><span class="diff-badge diff-${diffBand(score)}">${score}</span></td>`;
         return `<td><span class="diff-empty">—</span></td>`;
       });
-      return `<tr><td class="ex-name-cell">${escHtml(ex.name)}</td>${cells.join('')}</tr>`;
+      return `<tr>
+        <td class="ex-name-cell">${escHtml(ex.name)}</td>
+        ${cells.join('')}
+        <td><button class="hist-del-btn" data-type="exercise-row" data-exid="${ex.id}" data-dates="${exDates.join(',')}">×</button></td>
+      </tr>`;
     });
 
     const dateHeaders = exDates.map(d => `<th>${formatDate(d)}</th>`).join('');
@@ -671,11 +682,14 @@ function renderHistory() {
         <p class="caption">✓ = completed &nbsp;·&nbsp; number = difficulty score</p>
         <div class="history-table-wrap">
           <table class="history-table diff-table">
-            <thead><tr><th>Exercise</th>${dateHeaders}</tr></thead>
+            <thead><tr><th>Exercise</th>${dateHeaders}<th></th></tr></thead>
             <tbody>${rows.join('')}</tbody>
           </table>
         </div>
       </div>`;
+    diffEl.querySelectorAll('.hist-del-btn').forEach(btn => {
+      btn.addEventListener('click', () => deleteExerciseRow(btn.dataset.exid, btn.dataset.dates.split(',')));
+    });
   }
 
   // ---- Pain history ----
@@ -689,7 +703,11 @@ function renderHistory() {
         if (score === undefined) return `<td><span class="diff-empty">—</span></td>`;
         return `<td><span class="diff-badge diff-${painBand(score)}">${score}</span></td>`;
       });
-      return `<tr><td class="ex-name-cell">${escHtml(pain.name)}</td>${cells.join('')}</tr>`;
+      return `<tr>
+        <td class="ex-name-cell">${escHtml(pain.name)}</td>
+        ${cells.join('')}
+        <td><button class="hist-del-btn" data-painid="${pain.id}" data-dates="${painDates.join(',')}">×</button></td>
+      </tr>`;
     }).filter((_, i) => painDates.some(date => painByDate[date] && painByDate[date][pains[i].id] !== undefined));
 
     if (rows.length === 0) {
@@ -702,15 +720,49 @@ function renderHistory() {
           <p class="caption">0 = no pain &nbsp;·&nbsp; 10 = worst imaginable</p>
           <div class="history-table-wrap">
             <table class="history-table diff-table">
-              <thead><tr><th>Pain</th>${dateHeaders}</tr></thead>
+              <thead><tr><th>Pain</th>${dateHeaders}<th></th></tr></thead>
               <tbody>${rows.join('')}</tbody>
             </table>
           </div>
         </div>`;
+      painHistEl.querySelectorAll('.hist-del-btn').forEach(btn => {
+        btn.addEventListener('click', () => deletePainRow(btn.dataset.painid, btn.dataset.dates.split(',')));
+      });
     }
   }
 
   document.getElementById('download-btn').onclick = downloadAllData;
+}
+
+function deleteHistoryEntry(type, date) {
+  const labels = { run: 'this run', weight: 'this weight entry' };
+  if (!confirm(`Delete ${labels[type] || 'this entry'}?`)) return;
+  if (type === 'run')    localStorage.removeItem(`run-${date}`);
+  if (type === 'weight') localStorage.removeItem(`weight-${date}`);
+  renderHistory();
+}
+
+function deleteExerciseRow(exId, dates) {
+  if (!confirm('Remove this exercise from the history shown?')) return;
+  dates.forEach(date => {
+    const d = loadData(`today-${date}`);
+    if (!d) return;
+    if (d.checks)     delete d.checks[exId];
+    if (d.difficulty) delete d.difficulty[exId];
+    saveData(`today-${date}`, d);
+  });
+  renderHistory();
+}
+
+function deletePainRow(painId, dates) {
+  if (!confirm('Remove this pain from the history shown?')) return;
+  dates.forEach(date => {
+    const pl = loadData(`painlog-${date}`);
+    if (!pl) return;
+    delete pl[painId];
+    saveData(`painlog-${date}`, pl);
+  });
+  renderHistory();
 }
 
 function formatDate(dateStr) {
